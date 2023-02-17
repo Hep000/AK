@@ -38,6 +38,10 @@ def trace(root):
     build(root)
     return nodes, edges
 
+nodes, edges = trace(d)
+print(nodes)
+print(edges)
+
 def draw_dot(root):
     dot = Digraph(format='svg', graph_attr={'randdir': 'LR'}) # LR = left to right
 
@@ -45,9 +49,12 @@ def draw_dot(root):
     for n in nodes:
         uid = str(id(n))
         # for any value in the graph, create a rectangular ('record') node for it
-        dot.node(name = uid + n._op, label = n._op)
-        # and connect this node to it
-        dot.edge(uid + n._op, uid)
+        dot.node(name = uid, label = "{data %.4f}" % (n.data, ), shape = 'record')
+        if n._op:
+            # if this value is a result of some operation, create an op node for it
+            dot.node(name = uid + n._op, label = n._op)
+            # and connect this node to it
+            dot.edge(uid + n._op, uid)
 
     for n1, n2 in edges:
         # connect n1 to the op node of n2
@@ -55,5 +62,13 @@ def draw_dot(root):
 
     return dot
 
-draw_dot(d)
+dot = draw_dot(d)
+
+print('dot.source')
+print(dot.source)
+
+print('dot.render')
+dot.render(directory='doctest-output', view=True)
+
+
 
