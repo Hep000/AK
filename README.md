@@ -1,3 +1,3 @@
-# Andrej-Karpathy
+# Andrej Karpathy
 
-I intend following his projects on the nano
+I intend following Andrej Karpathy's projects on the nano
