@@ -6,6 +6,7 @@
 
 import torch
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
 
 print('\n','torch.cuda.is_available =', torch.cuda.is_available(),'\n')
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -51,21 +52,56 @@ b2 = torch.randn(27,       generator=g, device=device, requires_grad=True)
 parameters = (C, W1, b1, W2, b2)
 print('Number of parameters =', sum(p.nelement() for p in parameters))
 
-for _ in range(100):
+# lre = torch.linspace(-3, 0, 1000).to(device)
 
-    # forward pass
+# lri = []
+# lossi = []
+
+
+for i in range(15):
+    # for i in range(1000):
+    for _ in range(1000):
+
+        # constuct minibatch
+        ix = torch.randint(0, X.shape[0], (256,), generator=g, device=device)
+
+        # forward pass
+        emb = C[X[ix]]
+        h = torch.tanh(emb.view(-1, 6) @ W1 + b1)
+        logits = h @ W2 + b2
+        loss = F.cross_entropy(logits, Y[ix])
+        # print('loss =', round(loss.item(),2))
+
+        # backward pass
+        for p in parameters:
+            p.grad = None
+        loss.backward()
+
+        # update
+        # lr = lre[i]
+        if i <=7: 
+            lr = 0.1
+        else    :
+            if i <=10: 
+                lr = 0.05
+            else :
+                lr = 0.02
+        for p in parameters:
+            # p.data += -10**lr * p.grad
+            p.data += -lr * p.grad
+
+        # track statistics
+        # lri.append(lr)
+        # lossi.append(loss)
+
+    
+
+    # forward pass over full data
     emb = C[X]
     h = torch.tanh(emb.view(-1, 6) @ W1 + b1)
     logits = h @ W2 + b2
     loss = F.cross_entropy(logits, Y)
-    print('loss =', round(loss.item(),2))
+    print('i =', i, 'lr =', lr, 'loss =', round(loss.item(),3))
 
-    # backward pass
-    for p in parameters:
-        p.grad = None
-    loss.backward()
-
-    # update
-    for p in parameters:
-        p.data += -0.1 * p.grad
-
+# plt.plot(lri, lossi)
+# plt.show()
