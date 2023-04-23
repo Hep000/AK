@@ -80,7 +80,7 @@ print(f'\n   First 2 training examples:')
 print('        ', words[0])
 for i in range(7): print(f'        {itos[Xtr[i,0].item()]}{itos[Xtr[i,1].item()]}{itos[Xtr[i,2].item()]} ---> {itos[Ytr[i].item()]}')
 print('        ', words[1])
-for i in range(7,1,15): print(f'        {itos[Xtr[i,0].item()]}{itos[Xtr[i,1].item()]}{itos[Xtr[i,2].item()]} ---> {itos[Ytr[i].item()]}')
+for i in range(7,15): print(f'        {itos[Xtr[i,0].item()]}{itos[Xtr[i,1].item()]}{itos[Xtr[i,2].item()]} ---> {itos[Ytr[i].item()]}')
 print()
 end = time.time()
 print(f'Elapsed time = {end - start:.3f}\n')
@@ -104,80 +104,118 @@ print('   Number of parameters in MLP=', sum(p.nelement() for p in parameters),'
 end = time.time()
 print(f'Elapsed time = {end - start:.3f}\n')
 
+lr_order = torch.zeros((18,3), dtype=int)
+lr_order[0 ,0], lr_order[ 0,1], lr_order[ 0,2] = 1, 0, 0 # 1
+lr_order[1 ,0], lr_order[ 1,1], lr_order[ 1,2] = 0, 1, 0 # 2
+lr_order[2 ,0], lr_order[ 2,1], lr_order[ 2,2] = 0, 0, 1 # 3
 
-# optimize over a different meta parameters
-for minibatch_size in (32, 64, 128):
+lr_order[3 ,0], lr_order[ 3,1], lr_order[ 3,2] = 1, 0, 0 # 1
+lr_order[4 ,0], lr_order[ 4,1], lr_order[ 4,2] = 0, 0, 1 # 3
+lr_order[5 ,0], lr_order[ 5,1], lr_order[ 5,2] = 0, 1, 0 # 2
+
+lr_order[6 ,0], lr_order[ 6,1], lr_order[ 6,2] = 0, 1, 0 # 2
+lr_order[7 ,0], lr_order[ 7,1], lr_order[ 7,2] = 1, 0, 0 # 1
+lr_order[8 ,0], lr_order[ 8,1], lr_order[ 8,2] = 0, 0, 1 # 3
+
+lr_order[9 ,0], lr_order[ 9,1], lr_order[ 9,2] = 0, 1, 0 # 2
+lr_order[10,0], lr_order[10,1], lr_order[10,2] = 0, 0, 1 # 3
+lr_order[11,0], lr_order[11,1], lr_order[11,2] = 1, 0, 0 # 1
+
+lr_order[12,0], lr_order[12,1], lr_order[12,2] = 0, 0, 1 # 3
+lr_order[13,0], lr_order[13,1], lr_order[13,2] = 1, 0, 0 # 1
+lr_order[14,0], lr_order[14,1], lr_order[14,2] = 0, 1, 0 # 2
+
+lr_order[15,0], lr_order[15,1], lr_order[15,2] = 0, 0, 1 # 3
+lr_order[16,0], lr_order[16,1], lr_order[16,2] = 0, 1, 0 # 2
+lr_order[17,0], lr_order[17,1], lr_order[17,2] = 1, 0, 0 # 1
+# lr_order.to(device)
+
+# optimize over a different optimization parameters
+for minibatch_size in (128, 256):
 
     print('Beginning optimisation with meta parameters:\n')
-    lr_first__10000 = 0.1
-    lr_second_10000 = 0.05
-    lr_third__10000 = 0.02
-    lr_final_10000s = 0.01
     print(f'\
-    n_hidden_neurons  = {n_hidden_neurons   }\n\
-    minibatch_size    = {minibatch_size     }\n\
-    lr_first__10,000  = {lr_first__10000:.2f}\n\
-    lr_second_10,000  = {lr_second_10000:.2f}\n\
-    lr_third__10,000  = {lr_third__10000:.2f}\n\
-    lr_final_10,000s  = {lr_final_10000s:.2f}')
+    n_hidden_neurons = {n_hidden_neurons  }\n\
+    minibatch_size   = {minibatch_size:.2f}')
     print()
 
     start = time.time()
-    i10000 = 0
-    while i10000 <=5 and time.time() - start < 20:
 
-        for _ in range(1000):
+    # test and update learning rate
+    lr_medium = 0.12
+    lr_high   = 0.13
+    lr_low    = 0.11
+    # lr_result = torch.zeros((18,3), device=device)
+    lr_result = torch.zeros((18,3))
 
-            # constuct minibatch
-            ix = torch.randint(0, Xtr.shape[0], (minibatch_size,), generator=g, device=device)
+    while time.time() - start < 20:
 
-            # forward pass
-            emb = C[Xtr[ix]]
+        # calculate loss of initial model
+        # emb = C[Xtr]
+        # h = torch.tanh(emb.view(-1, 6) @ W1 + b1)
+        # logits = h @ W2 + b2
+        # tr_loss = F.cross_entropy(logits, Ytr)
+        tr_loss = 1
+
+        for lr_test_i in range(18):
+            loss_start = tr_loss
+            if lr_order[lr_test_i, 0] == 1:
+                lr = lr_medium
+                lr_test_j = 0
+            else:
+                if lr_order[lr_test_i, 1] == 1:
+                    lr = lr_high
+                    lr_test_j = 1
+                else:
+                    if lr_order[lr_test_i, 2] == 1:
+                        lr = lr_low
+                        lr_test_j = 2
+                    else: print('lr_test_error')
+                
+            for i1000 in range(100):
+
+                # constuct minibatch
+                ix = torch.randint(0, Xtr.shape[0], (minibatch_size,), generator=g, device=device)
+
+                # forward pass
+                emb = C[Xtr[ix]]
+                h = torch.tanh(emb.view(-1, 6) @ W1 + b1)
+                logits = h @ W2 + b2
+                loss = F.cross_entropy(logits, Ytr[ix])
+
+                # backward pass
+                for p in parameters:
+                    p.grad = None
+                loss.backward()
+
+                # update MLP parameters
+                for p in parameters:
+                    p.data += -lr * p.grad
+
+                # track statistics
+                # lri.append(lr)
+                # lossi.append(loss)
+
+            # forward pass over training data data
+            emb = C[Xtr]
             h = torch.tanh(emb.view(-1, 6) @ W1 + b1)
             logits = h @ W2 + b2
-            loss = F.cross_entropy(logits, Ytr[ix])
+            tr_loss = F.cross_entropy(logits, Ytr)
 
-            # backward pass
-            for p in parameters:
-                p.grad = None
-            loss.backward()
+            # store change in loss
+            change = (tr_loss - loss_start) / loss_start
+            lr_result[lr_test_i, lr_test_j] = (tr_loss - loss_start) / loss_start # store relative change in loss
 
-            # update
-            if i10000 == 0: 
-                lr = lr_first__10000
-            else    :
-                if i10000 == 1: 
-                    lr = lr_second_10000
-                else: 
-                    if i10000 == 2:
-                        lr = lr_third__10000
-                    else:
-                        lr = lr_final_10000s
-            for p in parameters:
-                p.data += -lr * p.grad
+            # forward pass over development data data
+            emb = C[Xdev]
+            h = torch.tanh(emb.view(-1, 6) @ W1 + b1)
+            logits = h @ W2 + b2
+            dev_loss = F.cross_entropy(logits, Ydev)
 
-            # track statistics
-            # lri.append(lr)
-            # lossi.append(loss)
+            print('        iterations so far =', i1000+1, 'lr =', lr,\
+                'Loss over training data =', round(tr_loss.item(),3),\
+                'Loss over development data =', round(dev_loss.item(),3))#,\
+                # 'Relative loss =', round(lr_result[lr_test_i, lr_test_j].item(),3))
 
-        # forward pass over training data data
-        emb = C[Xtr]
-        h = torch.tanh(emb.view(-1, 6) @ W1 + b1)
-        logits = h @ W2 + b2
-        tr_loss = F.cross_entropy(logits, Ytr)
-
-        # forward pass over development data data
-        emb = C[Xdev]
-        h = torch.tanh(emb.view(-1, 6) @ W1 + b1)
-        logits = h @ W2 + b2
-        dev_loss = F.cross_entropy(logits, Ydev)
-
-        print('        iterations so far =', (i10000+1)*10000, 'Last 10000 useing lr =', lr,\
-            'Loss over training data =', round(tr_loss.item(),3),\
-            'Loss over development data =', round(dev_loss.item(),3))
-        
-        i10000 += 1
-
-
-    end = time.time()
-    print(f'\nElapsed time = {end - start:.1f}\n')
+        end = time.time()
+        print(f'\nElapsed time = {end - start:.1f}\n')
