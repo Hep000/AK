@@ -145,8 +145,8 @@ for minibatch_size in (128, 256):
     lr_medium = 0.12
     lr_high   = 0.13
     lr_low    = 0.11
-    # lr_result = torch.zeros((18,3), device=device)
-    lr_result = torch.zeros((18,3))
+    lr_result = torch.zeros((18,3), device=device)
+    # lr_result = torch.zeros((18,3))
 
     while time.time() - start < 20:
 
@@ -204,7 +204,9 @@ for minibatch_size in (128, 256):
 
             # store change in loss
             change = (tr_loss - loss_start) / loss_start
-            lr_result[lr_test_i, lr_test_j] = (tr_loss - loss_start) / loss_start # store relative change in loss
+            lr_result[lr_test_i, lr_test_j] = change
+            print(f'lr_result.is_cuda = {lr_result.is_cuda} change.is_cuda = {change.is_cuda} change = {change:.3f} lr_test_i = {lr_test_i} lr_test_j = {lr_test_j} lr_result[lr_test_i, lr_test_j] = {lr_result[lr_test_i, lr_test_j]}')
+            # lr_result[lr_test_i, lr_test_j] = change # store relative change in loss
 
             # forward pass over development data data
             emb = C[Xdev]
