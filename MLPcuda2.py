@@ -11,8 +11,8 @@ import torch
 print('   torch               imported')
 import torch.nn.functional as F
 print('   torch.nn.functional imported')
-import matplotlib.pyplot as plt
-print('   matplotlib,pyplot   imported')
+# import matplotlib.pyplot as plt
+# print('   matplotlib,pyplot   imported')
 import random
 print('   random              imported')
 end = time.time()
@@ -65,6 +65,7 @@ def build_dataset(words):
  
     return(X, Y)
 
+words = words[:1000]
 random.seed(42)
 random.shuffle(words)
 n1 = int(0.8*len(words))
@@ -77,147 +78,150 @@ print(f'   Size of training    X: {Xtr.shape  } training     Y: {Ytr.shape  } Xt
 print(f'   Size of development X:  {Xdev.shape} development  Y:  {Ydev.shape} Xdev.is_cuda: {Xdev.is_cuda} Ydev.is_cuda: {Ydev.is_cuda}')
 print(f'   Size of test        X:  {Xte.shape } test         Y:  {Yte.shape } Xte.is_cuda : {Xte.is_cuda } Yte.is_cuda : {Yte.is_cuda }')
 print(f'\n   First 2 training examples:')
-print('        ', words[0])
-for i in range(7): print(f'        {itos[Xtr[i,0].item()]}{itos[Xtr[i,1].item()]}{itos[Xtr[i,2].item()]} ---> {itos[Ytr[i].item()]}')
-print('        ', words[1])
-for i in range(7,15): print(f'        {itos[Xtr[i,0].item()]}{itos[Xtr[i,1].item()]}{itos[Xtr[i,2].item()]} ---> {itos[Ytr[i].item()]}')
+print('       ', words[0])
+for i in range(5): print(f'        {itos[Xtr[i,0].item()]}{itos[Xtr[i,1].item()]}{itos[Xtr[i,2].item()]} ---> {itos[Ytr[i].item()]}')
+print('       ', words[1])
+for i in range(5,13): print(f'        {itos[Xtr[i,0].item()]}{itos[Xtr[i,1].item()]}{itos[Xtr[i,2].item()]} ---> {itos[Ytr[i].item()]}')
 print()
 end = time.time()
-print(f'Elapsed time = {end - start:.3f}\n')
+print(f'Elapsed time = {end - start:.3f}')
 
 # meta parameters of MLP
 dim_C = 2
-n_hidden_neurons = 100
 
-# set up MLP
-start = time.time()
-print('Set up MLP\n')
-g = torch.Generator(device=device).manual_seed(2147483647) # for reproducibility
-C = torch.randn((27,dim_C),    generator=g, device=device, requires_grad=True)
-W1 = torch.randn((block_size*dim_C,n_hidden_neurons),  generator=g, device=device, requires_grad=True)
-b1 = torch.randn(n_hidden_neurons,      generator=g, device=device, requires_grad=True)
-W2 = torch.randn((n_hidden_neurons,27), generator=g, device=device, requires_grad=True)
-b2 = torch.randn(27,       generator=g, device=device, requires_grad=True)
+for n_hidden_neurons in (32, 64):
 
-parameters = (C, W1, b1, W2, b2)
-print('   Number of parameters in MLP=', sum(p.nelement() for p in parameters),'\n')
-end = time.time()
-print(f'Elapsed time = {end - start:.3f}\n')
-
-lr_order = torch.zeros((18,3), dtype=int)
-lr_order[0 ,0], lr_order[ 0,1], lr_order[ 0,2] = 1, 0, 0 # 1
-lr_order[1 ,0], lr_order[ 1,1], lr_order[ 1,2] = 0, 1, 0 # 2
-lr_order[2 ,0], lr_order[ 2,1], lr_order[ 2,2] = 0, 0, 1 # 3
-
-lr_order[3 ,0], lr_order[ 3,1], lr_order[ 3,2] = 1, 0, 0 # 1
-lr_order[4 ,0], lr_order[ 4,1], lr_order[ 4,2] = 0, 0, 1 # 3
-lr_order[5 ,0], lr_order[ 5,1], lr_order[ 5,2] = 0, 1, 0 # 2
-
-lr_order[6 ,0], lr_order[ 6,1], lr_order[ 6,2] = 0, 1, 0 # 2
-lr_order[7 ,0], lr_order[ 7,1], lr_order[ 7,2] = 1, 0, 0 # 1
-lr_order[8 ,0], lr_order[ 8,1], lr_order[ 8,2] = 0, 0, 1 # 3
-
-lr_order[9 ,0], lr_order[ 9,1], lr_order[ 9,2] = 0, 1, 0 # 2
-lr_order[10,0], lr_order[10,1], lr_order[10,2] = 0, 0, 1 # 3
-lr_order[11,0], lr_order[11,1], lr_order[11,2] = 1, 0, 0 # 1
-
-lr_order[12,0], lr_order[12,1], lr_order[12,2] = 0, 0, 1 # 3
-lr_order[13,0], lr_order[13,1], lr_order[13,2] = 1, 0, 0 # 1
-lr_order[14,0], lr_order[14,1], lr_order[14,2] = 0, 1, 0 # 2
-
-lr_order[15,0], lr_order[15,1], lr_order[15,2] = 0, 0, 1 # 3
-lr_order[16,0], lr_order[16,1], lr_order[16,2] = 0, 1, 0 # 2
-lr_order[17,0], lr_order[17,1], lr_order[17,2] = 1, 0, 0 # 1
-# lr_order.to(device)
-
-# optimize over a different optimization parameters
-for minibatch_size in (128, 256):
-
-    print('Beginning optimisation with meta parameters:\n')
-    print(f'\
-    n_hidden_neurons = {n_hidden_neurons  }\n\
-    minibatch_size   = {minibatch_size:.2f}')
-    print()
-
+    # set up MLP
     start = time.time()
+    print(f'\nSet up MLP\n\n\
+    dim_C            = {dim_C}\n\
+    n_hidden_neurons = {n_hidden_neurons}\n')
+    g  = torch.Generator(device=device).manual_seed(2147483647) # for reproducibility
+    C  = torch.randn((27,dim_C),                           generator=g, device=device, requires_grad=True)
+    W1 = torch.randn((block_size*dim_C,n_hidden_neurons),  generator=g, device=device, requires_grad=True)
+    b1 = torch.randn(n_hidden_neurons,                     generator=g, device=device, requires_grad=True)
+    W2 = torch.randn((n_hidden_neurons,27),                generator=g, device=device, requires_grad=True)
+    b2 = torch.randn(27,                                   generator=g, device=device, requires_grad=True)
 
-    # test and update learning rate
-    lr_medium = 0.12
-    lr_high   = 0.13
-    lr_low    = 0.11
-    lr_result = torch.zeros((18,3), device=device)
-    # lr_result = torch.zeros((18,3))
+    parameters = (C, W1, b1, W2, b2)
+    print('    Number of parameters in MLP=', sum(p.nelement() for p in parameters))
+    end = time.time()
+    # print(f'Elapsed time = {end - start:.3f}\n')
 
-    while time.time() - start < 20:
+    lr_order = torch.zeros((18,3), dtype=int)
+    lr_order[0 ,0], lr_order[ 0,1], lr_order[ 0,2] = 1, 0, 0 # 1
+    lr_order[1 ,0], lr_order[ 1,1], lr_order[ 1,2] = 0, 1, 0 # 2
+    lr_order[2 ,0], lr_order[ 2,1], lr_order[ 2,2] = 0, 0, 1 # 3
+    lr_order[3 ,0], lr_order[ 3,1], lr_order[ 3,2] = 1, 0, 0 # 1
+    lr_order[4 ,0], lr_order[ 4,1], lr_order[ 4,2] = 0, 0, 1 # 3
+    lr_order[5 ,0], lr_order[ 5,1], lr_order[ 5,2] = 0, 1, 0 # 2
+    lr_order[6 ,0], lr_order[ 6,1], lr_order[ 6,2] = 0, 1, 0 # 2
+    lr_order[7 ,0], lr_order[ 7,1], lr_order[ 7,2] = 1, 0, 0 # 1
+    lr_order[8 ,0], lr_order[ 8,1], lr_order[ 8,2] = 0, 0, 1 # 3
+    lr_order[9 ,0], lr_order[ 9,1], lr_order[ 9,2] = 0, 1, 0 # 2
+    lr_order[10,0], lr_order[10,1], lr_order[10,2] = 0, 0, 1 # 3
+    lr_order[11,0], lr_order[11,1], lr_order[11,2] = 1, 0, 0 # 1
+    lr_order[12,0], lr_order[12,1], lr_order[12,2] = 0, 0, 1 # 3
+    lr_order[13,0], lr_order[13,1], lr_order[13,2] = 1, 0, 0 # 1
+    lr_order[14,0], lr_order[14,1], lr_order[14,2] = 0, 1, 0 # 2
+    lr_order[15,0], lr_order[15,1], lr_order[15,2] = 0, 0, 1 # 3
+    lr_order[16,0], lr_order[16,1], lr_order[16,2] = 0, 1, 0 # 2
+    lr_order[17,0], lr_order[17,1], lr_order[17,2] = 1, 0, 0 # 1
+    # lr_order.to(device)
 
-        # calculate loss of initial model
-        # emb = C[Xtr]
-        # h = torch.tanh(emb.view(-1, 6) @ W1 + b1)
-        # logits = h @ W2 + b2
-        # tr_loss = F.cross_entropy(logits, Ytr)
-        tr_loss = 1
+    # optimize over a different optimization parameters
+    for minibatch_size in (512,1024):
 
-        for lr_test_i in range(18):
-            loss_start = tr_loss
-            if lr_order[lr_test_i, 0] == 1:
-                lr = lr_medium
-                lr_test_j = 0
-            else:
-                if lr_order[lr_test_i, 1] == 1:
-                    lr = lr_high
-                    lr_test_j = 1
-                else:
-                    if lr_order[lr_test_i, 2] == 1:
-                        lr = lr_low
-                        lr_test_j = 2
-                    else: print('lr_test_error')
-                
-            for i1000 in range(100):
+        print(f'\n    minibatch_size = {minibatch_size:.2f}\n')
 
-                # constuct minibatch
-                ix = torch.randint(0, Xtr.shape[0], (minibatch_size,), generator=g, device=device)
+        # reset learning rates and set up results
+        lr_medium = 0.12
+        lr_high   = 0.13
+        lr_low    = 0.11
 
-                # forward pass
-                emb = C[Xtr[ix]]
-                h = torch.tanh(emb.view(-1, 6) @ W1 + b1)
-                logits = h @ W2 + b2
-                loss = F.cross_entropy(logits, Ytr[ix])
+        start = time.time()
 
-                # backward pass
-                for p in parameters:
-                    p.grad = None
-                loss.backward()
+        while time.time() - start < 30:
 
-                # update MLP parameters
-                for p in parameters:
-                    p.data += -lr * p.grad
+            # reset results
+            lr_medium_result = torch.zeros(1, device=device)
+            lr_high_result   = torch.zeros(1, device=device)
+            lr_low_result    = torch.zeros(1, device=device)
 
-                # track statistics
-                # lri.append(lr)
-                # lossi.append(loss)
-
-            # forward pass over training data data
+            # calculate loss of initial model
             emb = C[Xtr]
             h = torch.tanh(emb.view(-1, 6) @ W1 + b1)
             logits = h @ W2 + b2
             tr_loss = F.cross_entropy(logits, Ytr)
 
-            # store change in loss
-            change = (tr_loss - loss_start) / loss_start
-            lr_result[lr_test_i, lr_test_j] = change
-            print(f'lr_result.is_cuda = {lr_result.is_cuda} change.is_cuda = {change.is_cuda} change = {change:.3f} lr_test_i = {lr_test_i} lr_test_j = {lr_test_j} lr_result[lr_test_i, lr_test_j] = {lr_result[lr_test_i, lr_test_j]}')
-            # lr_result[lr_test_i, lr_test_j] = change # store relative change in loss
+            for lr_test_i in range(18):
+                loss_start = tr_loss
+                if lr_order[lr_test_i, 0] == 1:
+                    lr = lr_medium
+                    lr_test_j = 0
+                else:
+                    if lr_order[lr_test_i, 1] == 1:
+                        lr = lr_high
+                        lr_test_j = 1
+                    else:
+                        if lr_order[lr_test_i, 2] == 1:
+                            lr = lr_low
+                            lr_test_j = 2
+                        else: print('lr_test_error')
+                    
+                for i1000 in range(100):
 
-            # forward pass over development data data
+                    # constuct minibatch
+                    ix = torch.randint(0, Xtr.shape[0], (minibatch_size,), generator=g, device=device)
+
+                    # forward pass
+                    emb = C[Xtr[ix]]
+                    h = torch.tanh(emb.view(-1, 6) @ W1 + b1)
+                    logits = h @ W2 + b2
+                    loss = F.cross_entropy(logits, Ytr[ix])
+
+                    # backward pass
+                    for p in parameters:
+                        p.grad = None
+                    loss.backward()
+
+                    # update MLP parameters
+                    for p in parameters:
+                        p.data += -lr * p.grad
+
+                # calculate the loss over the full training data
+                emb = C[Xtr]
+                h = torch.tanh(emb.view(-1, 6) @ W1 + b1)
+                logits = h @ W2 + b2
+                tr_loss = F.cross_entropy(logits, Ytr)
+
+                # store change in loss for each loss rate
+                change = (tr_loss - loss_start) / loss_start
+                if lr_test_j == 0: lr_medium_result += change
+                if lr_test_j == 1: lr_high_result   += change
+                if lr_test_j == 2: lr_low_result    += change
+
+    #             print(f'\
+    # iterations = {i1000+1} lr = {lr:6.3}\
+    # Loss over training data = {tr_loss.item():6.3}\
+    # Relative losses = {lr_medium_result.item():6.3} {lr_high_result.item():6.3} {lr_low_result.item():6.3}')
+                
+            # update loss rate
+            if lr_high_result.item() < lr_medium_result and lr_high_result.item()  < lr_low_result:
+                lr_medium *= 1.1
+                lr_high   *= 1.1
+                lr_low    *= 1.1
+            else:
+                if lr_low_result.item() <= lr_medium_result and lr_low_result.item() <= lr_high_result:
+                    lr_medium /= 1.1
+                    lr_high   /= 1.1
+                    lr_low    /= 1.1
+                
+            # calculate loss over development data
             emb = C[Xdev]
             h = torch.tanh(emb.view(-1, 6) @ W1 + b1)
             logits = h @ W2 + b2
             dev_loss = F.cross_entropy(logits, Ydev)
 
-            print('        iterations so far =', i1000+1, 'lr =', lr,\
-                'Loss over training data =', round(tr_loss.item(),3),\
-                'Loss over development data =', round(dev_loss.item(),3))#,\
-                # 'Relative loss =', round(lr_result[lr_test_i, lr_test_j].item(),3))
-
-        end = time.time()
-        print(f'\nElapsed time = {end - start:.1f}\n')
+            end = time.time()
+            print(f'        Elapsed time = {end - start:5.1f} training loss = {tr_loss:7.4} development loss = {dev_loss:7.4}')
